@@ -14,10 +14,12 @@ htmlstrip = re.compile("<" # open
     ">"        # end
 , re.I)
 
+
 def clean_attributes(html):
     while htmlstrip.search(html):
         html = htmlstrip.sub('<\\1\\2>', html)
     return html
+
 
 def normalize_spaces(s):
     if not s:
@@ -29,5 +31,6 @@ def normalize_spaces(s):
 html_cleaner = Cleaner(scripts=True, javascript=True, comments=True,
                   style=True, links=True, meta=False, add_nofollow=False,
                   page_structure=False, processing_instructions=True, embedded=False,
-                  frames=False, forms=False, annoying_tags=False, remove_tags=None,
-                  remove_unknown_tags=False, safe_attrs_only=False)
+                  frames=False, forms=True, annoying_tags=False, remove_tags=None,
+                  remove_unknown_tags=False, safe_attrs_only=False,
+                  kill_tags=['textarea'])
