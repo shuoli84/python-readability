@@ -384,7 +384,7 @@ class Document:
                 p.text = elem.text.strip()
                 elem.text = None
                 elem.insert(0, p)
-                log.debug("Appended "+tounicode(p)+" to "+describe(elem))
+                log.debug(u"Appended {} to {}".format(tounicode(p), describe(elem)))
 
             for pos, child in reversed(list(enumerate(elem))):
                 if child.tail and child.tail.strip():
@@ -392,9 +392,9 @@ class Document:
                     p.text = child.tail.strip()
                     child.tail = None
                     elem.insert(pos + 1, p)
-                    log.debug("Inserted {} to {}".format(tounicode(p), describe(elem)))
+                    log.debug(u'Inserted {} to {}'.format(tounicode(p), describe(elem)))
                 if child.tag.lower() == 'br':
-                    log.debug('Dropped <br> at {}'.format(describe(elem)))
+                    log.debug(u'Dropped <br> at {}'.format(describe(elem)))
                     child.drop_tree()
 
     def tags(self, node, *tag_names):

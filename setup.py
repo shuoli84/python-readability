@@ -26,7 +26,8 @@ setup(
     install_requires=[
         "chardet",
         lxml_requirement,
-        "cssselect"
+        "cssselect",
+        "underscore.py"
         ],
     classifiers=[
         "Environment :: Web Environment",

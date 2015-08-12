@@ -1,6 +1,7 @@
 from lxml.html import tostring
 import lxml.html
 import re
+from underscore import _
 
 from .cleaners import normalize_spaces, clean_attributes
 from .encoding import get_encoding
@@ -61,6 +62,7 @@ def get_title(doc):
 def add_match(collection, text, orig):
     text = norm_title(text)
 
+    print text
     # TODO: Chinese and English are quite different, we may use some traits to support better parse
     if len(text.split()) >= 2 and len(text) >= 15:
         if text.replace('"', '') in orig.replace('"', ''):
@@ -71,12 +73,33 @@ TITLE_CSS_HEURISTICS = ['#title', '#head', '#heading', '.pageTitle',
                         '.contentheading', '.small_header_red']
 
 
+def title_candidate(doc):
+    candidates = set()
+    regex = re.compile('tit', re.U | re.I)
+
+    _(['.//h1', './/h2', './/h3', './/h4']).chain() \
+        .map(lambda x, *a: list(doc.iterfind(x))) \
+        .flatten() \
+        .filter(lambda elem, *a: elem.get('class') is not None) \
+        .filter(lambda elem, *a: regex.search(elem.get('class'))) \
+        .map(lambda elem, *a: [elem.text, elem.text_content()]) \
+        .flatten() \
+        .compact() \
+        .each(lambda elem, *a: candidates.add(elem))
+
+    if len(candidates) > 2:
+        # If we have more than 2 elements, then we may made a wrong guess
+        return set()
+
+    return candidates
+
+
 def shorten_title(doc):
     title = orig = get_title(doc)
 
     candidates = set()
 
-    for item in ['.//h1', './/h2', './/h3']:
+    for item in ['.//h1', './/h2', './/h3', './/h4']:
         for e in list(doc.iterfind(item)):
             if e.text:
                 add_match(candidates, e.text, orig)
@@ -89,6 +112,8 @@ def shorten_title(doc):
                 add_match(candidates, e.text, orig)
             if e.text_content():
                 add_match(candidates, e.text_content(), orig)
+
+    candidates = set.union(candidates, title_candidate(doc))
 
     if candidates:
         title = sorted(candidates, key=len)[-1]
