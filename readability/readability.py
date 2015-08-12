@@ -82,7 +82,7 @@ class Document:
             positive_keywords=["news-item", "block"]
             negative_keywords=["mysidebar", "related", "ads"]
         """
-        self.input = input
+        self.input = input.replace("</br>", "<br>")
         self.html = None
         self.encoding = None
         self.positive_keywords = compile_pattern(positive_keywords)
@@ -123,7 +123,7 @@ class Document:
         return shorten_title(self._html(True))
 
     def get_clean_html(self):
-        return clean_attributes(tounicode(self.html))
+        return clean_attributes(tounicode(self.html, method="html"))
 
     def summary(self, html_partial=False):
         """Generate the summary of the html document
@@ -143,6 +143,7 @@ class Document:
                 if ruthless:
                     self.remove_unlikely_candidates()
                 self.transform_misused_divs_into_paragraphs()
+
                 candidates = self.score_paragraphs()
 
                 best_candidate = self.select_best_candidate(candidates)
@@ -230,8 +231,6 @@ class Document:
                     output.append(sibling)
                 else:
                     output.getchildren()[0].getchildren()[0].append(sibling)
-        #if output is not None:
-        #    output.append(best_elem)
         return output
 
     def select_best_candidate(self, candidates):
@@ -290,6 +289,7 @@ class Document:
             content_score += len(inner_text.split(u'，'))  # TODO should use a more general way
             content_score += len(inner_text.split(u'。'))
             content_score += len(inner_text.split(u'、'))
+            content_score += len(inner_text.split(u'；'))
             content_score += min((inner_text_len / 30), 3)  # 100 -> 30, Chinese is a expressive language
 
             # FIXME figure out how to remove the parent which has some other none text element?
@@ -379,23 +379,38 @@ class Document:
 
         # Wrap div's text into a <p>
         for elem in self.tags(self.html, 'div'):
+            elems_to_extract = []
+
             if elem.text and elem.text.strip():
                 p = fragment_fromstring('<p/>')
-                p.text = elem.text.strip()
+                p.text = elem.text.rstrip()
                 elem.text = None
-                elem.insert(0, p)
-                log.debug(u"Appended {} to {}".format(tounicode(p), describe(elem)))
+                elems_to_extract.append((0, p))
 
-            for pos, child in reversed(list(enumerate(elem))):
-                if child.tail and child.tail.strip():
-                    p = fragment_fromstring('<p/>')
-                    p.text = child.tail.strip()
-                    child.tail = None
-                    elem.insert(pos + 1, p)
-                    log.debug(u'Inserted {} to {}'.format(tounicode(p), describe(elem)))
+            last_pos = None
+            last_container = None
+            for pos, child in enumerate(elem):
+                if child.tail is not None:
+                    if last_container is None:
+                        last_pos = pos
+                        last_container = fragment_fromstring('<p/>')
+
+                    last_container.append(child)
+                else:
+                    elems_to_extract.append((last_pos, last_container))
+                    last_container = None
+
                 if child.tag.lower() == 'br':
-                    log.debug(u'Dropped <br> at {}'.format(describe(elem)))
                     child.drop_tree()
+
+            else:
+                elems_to_extract.append((last_pos, last_container))
+
+            log.debug('Got {} elements to insert'.format(elems_to_extract))
+            for pos, e in elems_to_extract:
+                if e is not None:
+                    elem.insert(pos, e)
+
 
     def tags(self, node, *tag_names):
         for tag_name in tag_names:

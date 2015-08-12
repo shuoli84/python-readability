@@ -62,9 +62,7 @@ def get_title(doc):
 def add_match(collection, text, orig):
     text = norm_title(text)
 
-    print text
-    # TODO: Chinese and English are quite different, we may use some traits to support better parse
-    if len(text.split()) >= 2 and len(text) >= 15:
+    if len(text) >= Settings.title_length.min:
         if text.replace('"', '') in orig.replace('"', ''):
             collection.add(text)
 
